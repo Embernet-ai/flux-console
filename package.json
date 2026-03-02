@@ -1,5 +1,5 @@
 {
-  "name": "io.netfoundry.zac",
+  "name": "flux-console",
   "version": "4.1.0",
   "description": "Ziti Administration Console",
   "main": "server.js",
@@ -8,10 +8,10 @@
     "clean": "rm -rf node_modules;",
     "zitified": "ZITI_IDENTITY_FILE=zac-identity.json ZITI_SERVICE_NAME=test-service node server.js",
     "ng": "ng",
-    "start": "ng serve ziti-console",
-    "build": "ng build ziti-console-lib && ng build ziti-console && ng build ziti-console-node",
-    "build-lib": "ng build ziti-console-lib && shx cp -r ./assets ./dist/ziti-console-lib && shx cp -r ./html ./dist/ziti-console-lib/assets && ng build ziti-console && ng build ziti-console-node",
-    "watch:lib": "onchange -i ./projects/ziti-console-lib/src/**/* -- npm run build-lib",
+    "start": "ng serve flux-console",
+    "build": "ng build flux-console-lib && ng build flux-console && ng build flux-console-node",
+    "build-lib": "ng build flux-console-lib && shx cp -r ./assets ./dist/flux-console-lib && shx cp -r ./html ./dist/flux-console-lib/assets && ng build flux-console && ng build flux-console-node",
+    "watch:lib": "onchange -i ./projects/flux-console-lib/src/**/* -- npm run build-lib",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "docker:build": "cross-conf-env docker image build . -t $npm_package_config_imageRepo:$npm_package_version",
@@ -32,10 +32,10 @@
     "docker:debugmessage": "echo Docker Debug Completed Successfully! Hit Ctrl+C to terminate log tailing.",
     "predocker:debug": "run-s docker:build docker:run",
     "docker:debug": "run-s -cs docker:open:win docker:open:mac docker:debugmessage docker:taillogs",
-    "postinstall": "ls && node ./version.js && ng build ziti-console-lib"
+    "postinstall": "ls && node ./version.js && ng build flux-console-lib"
   },
   "config": {
-    "imageRepo": "netfoundry/ziti-console",
+    "imageRepo": "netfoundry/flux-console",
     "imageName": "zac",
     "imagePort": "1480"
   },
@@ -109,7 +109,7 @@
     "session-file-store": "^1.5.0",
     "tslib": "^2.3.0",
     "vanilla-jsoneditor": "^1.1.2",
-    "ziti-console-lib": "file:dist/ziti-console-lib",
+    "flux-console-lib": "file:dist/flux-console-lib",
     "zone.js": "~0.15.1"
   },
   "devDependencies": {
