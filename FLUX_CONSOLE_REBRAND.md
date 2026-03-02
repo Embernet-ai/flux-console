@@ -272,17 +272,75 @@ Flux Controller Edge Management API responds through overlay
 
 ## Phase 8 — Dashboard Integration
 
-This phase happens in the **dashboard repo** (`embernet-ai/industrial-dashboard`), not in `flux-console`. Included here for completeness.
+This phase happens in the **dashboard repo** (`embernet-ai/industrial-dashboard`), not in `flux-console`.
 
-> **Updated 2026-03-02:** The dashboard already has extensive Flux integration far beyond what was originally scoped here. The remaining blocker is building the actual SPA from this repo.
+> **Updated 2026-03-02:** SPA v1.0.0 released! Available at https://github.com/Embernet-ai/flux-console/releases/tag/flux-console-v1.0.0
 
 | # | Task | Repo | Details | Status |
 |---|------|------|---------|--------|
-| 50 | **Copy SPA build output** | Dashboard | Copy `dist/flux-console/*` into the dashboard's `/static/vendor/flux-console/` directory. Currently has a **placeholder** `index.html` with connectivity check against `/api/flux/mgmt/edge/management/v1/version`. Full SPA pending this repo's build. | 🟡 Placeholder |
+| 50 | **Deploy SPA from GitHub Release** | Dashboard | Download `flux-console-spa-1.0.0.zip` from release and extract to `web/static/vendor/flux-console/`. See integration options below. | ⬜ Ready |
 | 51 | **Create Flux Console card** | Dashboard | Admin card exists in `view_admin.html` and `view_global_command.html`. Shows mesh icon, "Flux Console" title, ADMIN badge, "Manage identities, services & policies" subtitle. Conditionally rendered with `{{if .FluxEnabled}}`. `openFluxConsole()` opens SPA in iframe modal. | ✅ Done |
 | 52 | **Add `/api/flux/*` proxy route** | Dashboard | `FluxMgmtProxyHandler` proxies `/api/flux/mgmt/*` to controller Edge Management API through overlay `DialContext` with mTLS. Permission-gated to `manage:flux` (Admin+). Additional endpoints: `/api/flux/tenants`, `/api/flux/tenant/summary`, `/api/flux/tenant/services`, `/api/flux/tenant/topology`, `/api/flux/tenant/resolve`, `/api/flux/latency`. | ✅ Done |
-| 53 | **Add `flux.console.enabled` Helm value** | Dashboard | `flux.enabled` exists in `values.yaml` and gates identity mount, env vars, and Go initialization. No separate `flux.console.enabled` sub-toggle — console card appears whenever `flux.enabled: true`. | ✅ Done (no separate console toggle needed) |
-| 54 | **Test embedded flow** | Manual | Log in to dashboard as admin (Azure AD SSO) → navigate to Flux Console card → click card → verify SPA loads in iframe modal → Flux login form appears (SQLite password auth) → enter credentials → `_flux_session` cookie set → identities list renders. See [`SQLITE_AUTH_IMPLEMENTATION.md` §11](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md#11-flux-console-iframe-login-integration). **Blocked on this repo's SPA build (task 50) and dashboard auth endpoints (SQLITE_AUTH_IMPLEMENTATION.md).** | ⬜ Blocked |
+| 53 | **Add `flux.console.enabled` Helm value** | Dashboard | `flux.enabled` exists in `values.yaml` and gates identity mount, env vars, and Go initialization. No separate `flux.console.enabled` sub-toggle — console card appears whenever `flux.enabled: true`. | ✅ Done |
+| 54 | **Test embedded flow** | Manual | See test checklist below. | ⬜ Ready |
+
+### Task 50: SPA Integration Options
+
+**Option A: Makefile target (recommended for dev)**
+```makefile
+FLUX_CONSOLE_VERSION := 1.0.0
+FLUX_CONSOLE_URL := https://github.com/Embernet-ai/flux-console/releases/download/flux-console-v$(FLUX_CONSOLE_VERSION)/flux-console-spa-$(FLUX_CONSOLE_VERSION).zip
+
+.PHONY: fetch-flux-console
+fetch-flux-console:
+	@echo "Fetching Flux Console SPA v$(FLUX_CONSOLE_VERSION)..."
+	@rm -rf web/static/vendor/flux-console/*
+	@curl -sL $(FLUX_CONSOLE_URL) -o /tmp/flux-console-spa.zip
+	@unzip -qo /tmp/flux-console-spa.zip -d web/static/vendor/flux-console/
+	@rm /tmp/flux-console-spa.zip
+	@echo "Done. Flux Console SPA deployed to web/static/vendor/flux-console/"
+```
+
+**Option B: Dockerfile multi-stage (recommended for production)**
+```dockerfile
+# In industrial-dashboard Dockerfile, add a stage to fetch the SPA:
+
+FROM alpine:3.19 AS flux-console
+ARG FLUX_CONSOLE_VERSION=1.0.0
+RUN apk add --no-cache curl unzip \
+    && curl -sL "https://github.com/Embernet-ai/flux-console/releases/download/flux-console-v${FLUX_CONSOLE_VERSION}/flux-console-spa-${FLUX_CONSOLE_VERSION}.zip" \
+       -o /flux-console-spa.zip \
+    && unzip -q /flux-console-spa.zip -d /flux-console
+
+# Then in your main build stage:
+COPY --from=flux-console /flux-console /app/web/static/vendor/flux-console
+```
+
+**Option C: Manual (one-time setup)**
+```powershell
+# In industrial-dashboard repo root:
+Invoke-WebRequest -Uri "https://github.com/Embernet-ai/flux-console/releases/download/flux-console-v1.0.0/flux-console-spa-1.0.0.zip" -OutFile flux-console-spa.zip
+Remove-Item -Recurse -Force web\static\vendor\flux-console\* -ErrorAction SilentlyContinue
+Expand-Archive -Path flux-console-spa.zip -DestinationPath web\static\vendor\flux-console\ -Force
+Remove-Item flux-console-spa.zip
+git add web/static/vendor/flux-console/
+git commit -m "feat(flux): deploy Flux Console SPA v1.0.0 from release"
+```
+
+### Task 54: Test Checklist
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Login to dashboard | Azure AD SSO succeeds, admin home loads |
+| 2 | Navigate to Flux Console card | Card visible in Admin view (requires `flux.enabled: true`) |
+| 3 | Click card | iframe modal opens with Flux Console |
+| 4 | Verify login form | Flux-branded password form (email + password), NOT Ziti Controller login |
+| 5 | Enter SQLite credentials | User must have `password_hash` set and `manage:flux` permission |
+| 6 | Submit login | `POST /api/flux/auth/login` → 200 → `_flux_session` cookie set |
+| 7 | Verify console loads | Identities list renders (API calls to `/api/flux/mgmt/edge/management/v1/identities`) |
+| 8 | Close modal, reopen | Session persists — no re-login required |
+| 9 | Click logout | `POST /api/flux/auth/logout` → session cleared → login form reappears |
+| 10 | Wait for session expiry (24h) or manually delete cookie | Next API call returns 401 → login form reappears |
 
 ### Dashboard Card (Actual Implementation)
 
@@ -300,6 +358,19 @@ The dashboard already has two Flux-related views:
 | `flux.js` | `web/static/js/flux.js` | Frontend: tenant switching, service table, auto-refresh, topology rendering |
 | `view_flux.html` | `web/templates/view_flux.html` | Full mesh management view (separate from the SPA) |
 | Device proxy | `internal/proxy/` | Routes `.flux.internal` addresses through overlay, SSRF allowlist |
+
+### Dependencies Checklist
+
+Before testing, ensure the dashboard has:
+
+- [ ] SQLite auth endpoints implemented:
+  - `POST /api/flux/auth/login` — validates bcrypt hash, sets `_flux_session` cookie
+  - `POST /api/flux/auth/logout` — clears session
+  - `GET /api/flux/auth/me` — returns current user if session valid
+- [ ] `ValidateFluxRequest()` updated to check `_flux_session` cookie
+- [ ] At least one user with:
+  - `password_hash` column populated (bcrypt)
+  - `manage:flux` permission (Admin role or explicit grant)
 
 ---
 
