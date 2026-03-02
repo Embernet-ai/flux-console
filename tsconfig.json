@@ -29,14 +29,14 @@
       "dom"
     ],
     "paths": {
-      "ziti-console-lib": [
-        "dist/ziti-console-lib"
+      "flux-console-lib": [
+        "dist/flux-console-lib"
       ],
       "json-schema-ref-resolver": [
         "dist/json-schema-ref-resolver"
       ],
-      "app-ziti-console": [
-        "dist/app-ziti-console"
+      "flux-console": [
+        "dist/flux-console"
       ]
     }
   },
