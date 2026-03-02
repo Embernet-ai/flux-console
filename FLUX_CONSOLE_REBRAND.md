@@ -5,7 +5,7 @@
 > **Tech Stack:** Angular 20 monorepo, Node.js ≥18, npm ≥8.1, SCSS, TypeScript
 > **Build Output:** Static SPA in `./dist/app-ziti-console`
 > **Deployment Target:** Embedded in the Embernet Dashboard at `/static/vendor/flux-console/`
-> **Auth:** Dashboard overlay proxy (session managed by dashboard backend, NOT standalone Ziti auth)
+> **Auth:** SQLite password auth via `_flux_session` cookie — iframe cannot use SSO. See [`SQLITE_AUTH_IMPLEMENTATION.md`](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md)
 > **UPG Ticket:** UPG-043
 > **Last Updated:** 2026-03-02
 
@@ -162,52 +162,81 @@ Only rename **user-visible display text**, not API protocol strings. This ensure
 
 ---
 
-## Phase 5 — Auth Integration (Dashboard Overlay Proxy)
+## Phase 5 — Auth Integration (SQLite Password for Iframe)
 
-> **Updated 2026-03-02:** The original plan assumed SQLite-based auth with iframe embedding. The actual dashboard implementation uses a different architecture — see details below.
+> **Updated 2026-03-02:** Verified against actual dashboard implementation. Auth approach finalized in [`SQLITE_AUTH_IMPLEMENTATION.md`](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md).
 
-The upstream ZAC authenticates directly against the Ziti Controller's edge management API with username/password. In our deployment, the dashboard backend has a **`FluxMgmtProxyHandler`** that proxies API calls to the controller through the Flux overlay SDK's `DialContext`. The console SPA is served as static files and opens in a **new browser window** (not an iframe).
+The upstream ZAC authenticates directly against the Ziti Controller's edge management API with username/password. In our deployment, the console opens in an **iframe modal** inside the dashboard. Azure AD SSO **cannot work inside iframes** — OAuth2 redirects break due to `X-Frame-Options` / CSP / redirect loops. Instead, the Flux Console authenticates via a **separate SQLite password** stored as a bcrypt hash in the dashboard's `users` table. This is completely independent of the dashboard's Azure AD SSO login.
+
+### Two Separate Auth Systems
+
+| What | Auth Method | Cookie | Notes |
+|------|------------|--------|-------|
+| **Dashboard** (main window) | Azure AD SSO via OAuth2 Proxy | `_oauth2_proxy` | Unchanged. Do NOT touch. |
+| **Flux Console** (iframe) | SQLite password (email + `password_hash`) | `_flux_session` | New. See [`SQLITE_AUTH_IMPLEMENTATION.md`](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md). |
 
 ### What the Dashboard Already Has (built in `industrial-dashboard`)
 
-- **`/api/flux/mgmt/*`** — Reverse proxy handler (`FluxMgmtProxyHandler`) that routes requests through the overlay `DialContext` to the Flux controller's Edge Management API. Permission-gated to `manage:flux` (Admin+).
+- **`/api/flux/mgmt/*`** — Reverse proxy handler (`FluxMgmtProxyHandler`) that routes requests through the overlay `DialContext` to the Flux controller's Edge Management API. Will be updated to validate `_flux_session` cookie via `ValidateFluxRequest()` instead of `GetUserRole()`.
 - **Flux SDK context** — `internal/flux/context.go` manages `FluxContext` with `Init()`, `DialContext()`, per-tenant contexts.
 - **Background sync** — `internal/flux/sync.go` syncs controller state (identities, services, routers) to local SQLite.
-- **Admin card** — `openFluxConsole()` opens `/static/vendor/flux-console/` in a new window.
-- **API endpoints** — `/api/flux/tenants`, `/api/flux/tenant/summary`, `/api/flux/tenant/services`, `/api/flux/tenant/topology`, `/api/flux/latency`.
+- **Admin card** — `openFluxConsole()` opens `/static/vendor/flux-console/index.html` in an **iframe modal** (not a new window).
+- **API endpoints** — `/api/flux/tenants`, `/api/flux/tenant/summary`, `/api/flux/tenant/services`, `/api/flux/tenant/topology`, `/api/flux/tenant/resolve`, `/api/flux/latency`.
+- **Flux auth endpoints (new)** — `/api/flux/auth/login`, `/api/flux/auth/logout`, `/api/flux/auth/me`, `/api/flux/auth/change-password`. See [`SQLITE_AUTH_IMPLEMENTATION.md` §6](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md#6-new-http-endpoints).
 
 ### Revised Auth Tasks
 
 | # | Task | Details | Status |
 |---|------|---------|--------|
-| 29 | **Identify auth service** | The Angular login service is at `projects/app-ziti-console/src/app/login/controller-login.service.ts`. It imports `LoginServiceClass` from `ziti-console-lib`. The lib's `auth.service.ts` handles OAuth flows. | ⬜ |
+| 29 | **Replace Ziti Controller login** | The Angular login service at `projects/flux-console/src/app/login/controller-login.service.ts` currently calls the Ziti Controller's `POST /authenticate` endpoint. Replace this with a `POST /api/flux/auth/login` call (email + password → dashboard validates bcrypt hash from SQLite → returns `_flux_session` cookie). The lib's `auth.service.ts` must be updated to use the new endpoint. | ⬜ |
 | 30 | **Configure API base URL** | Set the controller URL in `environment.ts` (or settings.json) to `/api/flux/mgmt` so all API calls route through the dashboard's proxy. The dashboard already strips this prefix and forwards to `edge/management/v1/*`. | ⬜ |
-| 31 | **Skip or bypass login** | Since the console opens from an already-authenticated dashboard session, the console needs to skip its own login flow. Options: (a) auto-authenticate using the dashboard session cookie (the proxy already handles auth), (b) pass a session token via URL param, or (c) configure the console as "pre-authenticated" and skip login entirely. **Option (c) is simplest** — the proxy handles all auth. | ⬜ |
-| 32 | **Remove standalone login page** | The console opens in a new window from the dashboard's admin card (`openFluxConsole()`). The standalone login page should be bypassed or replaced with a simple "Connecting..." loader that auto-redirects to the identity list. | ⬜ |
-| 33 | **Test API proxy flow** | Verify: console loads → calls `/api/flux/mgmt/edge/management/v1/identities` → dashboard proxy routes through overlay → controller responds → identities render. | ⬜ |
+| 31 | **Add auto-session check on iframe load** | On SPA init, call `GET /api/flux/auth/me` (sends `_flux_session` cookie if present). If 200 → user is already authenticated, skip login and show the Flux Console UI. If 401 → show the Flux password login form. This avoids re-login when the iframe is closed and reopened within the session window (24h sliding expiry). | ⬜ |
+| 32 | **Replace login page with Flux password form** | Replace the standalone Ziti Controller login page with a Flux-branded password login form (email + password). The form POSTs to `/api/flux/auth/login`. On success, hide the form and initialize the Flux Console UI. On failure, show an error message. See [`SQLITE_AUTH_IMPLEMENTATION.md` §11](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md#11-flux-console-iframe-login-integration) for the reference implementation. | ⬜ |
+| 33 | **Ensure `credentials: 'same-origin'` on all API calls** | Every `fetch()` or `HttpClient` call to `/api/flux/mgmt/*` must include `credentials: 'same-origin'` (or the Angular equivalent `withCredentials: true`) so the browser sends the `_flux_session` cookie. Without this, the proxy will reject requests as unauthenticated. | ⬜ |
+| 34a | **Add logout button** | Add a logout option (button or menu item) in the Flux Console UI that calls `POST /api/flux/auth/logout`. On success, clear local state and re-show the login form. | ⬜ |
+| 34b | **Handle session expiry gracefully** | If any `/api/flux/mgmt/*` call returns 401, intercept it globally (Angular HTTP interceptor) and re-show the login form instead of showing a broken UI. This handles the case where the 24h session expires while the iframe is open. | ⬜ |
+| 34c | **Test full auth + proxy flow** | Verify: (1) iframe loads → `GET /api/flux/auth/me` → 401 → login form shown. (2) User enters SQLite password → `POST /api/flux/auth/login` → 200 → `_flux_session` cookie set → console UI loads. (3) API calls to `/api/flux/mgmt/edge/management/v1/identities` → dashboard validates `_flux_session` cookie → proxies through overlay → controller responds → identities render. (4) Close + reopen iframe → `GET /api/flux/auth/me` → 200 → login skipped. (5) Logout button works. (6) Session expiry re-shows login form. | ⬜ |
 
-### Auth Flow (Revised — New Window Mode)
+### Auth Flow (Iframe Modal — SQLite Password)
 
 ```
 Admin clicks "Manage Identities" on dashboard Flux Console card
   │
   ▼
-Dashboard opens new window: /static/vendor/flux-console/index.html
+openFluxConsole() sets iframe src to /static/vendor/flux-console/index.html
+and displays the iframe modal overlay
   │
   ▼
-Flux Console SPA loads, skips login (pre-authenticated via dashboard session)
+Flux Console SPA loads in iframe
+  ├─ Calls GET /api/flux/auth/me (sends _flux_session cookie if present)
+  ├─ 200 → already authenticated → skip login, show Flux UI
+  └─ 401 → show Flux password login form
+  │
+  ▼
+User enters email + password (stored in SQLite users.password_hash)
+  │
+  ▼
+POST /api/flux/auth/login { email, password }
+  ├─ Dashboard verifies bcrypt hash from SQLite users table
+  ├─ Checks user has manage:flux permission
+  ├─ Creates session row in sessions table
+  └─ Sets _flux_session cookie (HttpOnly, Secure, SameSite=Lax)
   │
   ▼
 All API calls go to /api/flux/mgmt/* (same origin as dashboard)
+Browser sends _flux_session cookie automatically
   │
   ▼
-Dashboard FluxMgmtProxyHandler routes through overlay DialContext
+Dashboard ValidateFluxRequest() validates _flux_session cookie
+→ checks manage:flux permission → proxies to Flux controller via mTLS
   │
   ▼
 Flux Controller Edge Management API responds through overlay
 ```
 
-> **Note:** The dashboard's proxy authenticates to the controller using the embedded Flux identity (mounted from `flux.identity.existingSecret` in the Helm chart). The console SPA never handles controller credentials directly.
+> **Note:** The dashboard's proxy authenticates to the controller using mTLS with the embedded Flux identity (mounted from `flux.identity.existingSecret` in the Helm chart, path `/etc/flux/identity`). The console SPA never handles controller credentials directly. The `_flux_session` cookie is completely separate from the `_oauth2_proxy` cookie used for dashboard SSO — they serve different purposes and never interfere with each other.
+>
+> **Implementation details:** See [`SQLITE_AUTH_IMPLEMENTATION.md`](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md) for the full Go backend implementation (bcrypt hashing, session table, new endpoints, domain admin provisioning).
 
 ---
 
@@ -250,16 +279,16 @@ This phase happens in the **dashboard repo** (`embernet-ai/industrial-dashboard`
 | # | Task | Repo | Details | Status |
 |---|------|------|---------|--------|
 | 50 | **Copy SPA build output** | Dashboard | Copy `dist/flux-console/*` into the dashboard's `/static/vendor/flux-console/` directory. Currently has a **placeholder** `index.html` with connectivity check against `/api/flux/mgmt/edge/management/v1/version`. Full SPA pending this repo's build. | 🟡 Placeholder |
-| 51 | **Create Flux Console card** | Dashboard | Admin card exists in `view_admin.html` and `view_global_command.html`. Shows mesh icon, "Flux Console" title, ADMIN badge, "Manage identities, services & policies" subtitle. Conditionally rendered with `{{if .FluxEnabled}}`. `openFluxConsole()` opens SPA in new window. | ✅ Done |
-| 52 | **Add `/api/flux/*` proxy route** | Dashboard | `FluxMgmtProxyHandler` proxies `/api/flux/mgmt/*` to controller Edge Management API through overlay `DialContext`. Permission-gated to `manage:flux` (Admin+). Additional endpoints: `/api/flux/tenants`, `/api/flux/tenant/summary`, `/api/flux/tenant/services`, `/api/flux/tenant/topology`, `/api/flux/latency`. | ✅ Done |
+| 51 | **Create Flux Console card** | Dashboard | Admin card exists in `view_admin.html` and `view_global_command.html`. Shows mesh icon, "Flux Console" title, ADMIN badge, "Manage identities, services & policies" subtitle. Conditionally rendered with `{{if .FluxEnabled}}`. `openFluxConsole()` opens SPA in iframe modal. | ✅ Done |
+| 52 | **Add `/api/flux/*` proxy route** | Dashboard | `FluxMgmtProxyHandler` proxies `/api/flux/mgmt/*` to controller Edge Management API through overlay `DialContext` with mTLS. Permission-gated to `manage:flux` (Admin+). Additional endpoints: `/api/flux/tenants`, `/api/flux/tenant/summary`, `/api/flux/tenant/services`, `/api/flux/tenant/topology`, `/api/flux/tenant/resolve`, `/api/flux/latency`. | ✅ Done |
 | 53 | **Add `flux.console.enabled` Helm value** | Dashboard | `flux.enabled` exists in `values.yaml` and gates identity mount, env vars, and Go initialization. No separate `flux.console.enabled` sub-toggle — console card appears whenever `flux.enabled: true`. | ✅ Done (no separate console toggle needed) |
-| 54 | **Test embedded flow** | Manual | Log in to dashboard as admin → navigate to Flux Console card → click card → verify SPA loads in new window, auth works via proxy, identities list renders. **Blocked on this repo's SPA build (task 50).** | ⬜ Blocked |
+| 54 | **Test embedded flow** | Manual | Log in to dashboard as admin (Azure AD SSO) → navigate to Flux Console card → click card → verify SPA loads in iframe modal → Flux login form appears (SQLite password auth) → enter credentials → `_flux_session` cookie set → identities list renders. See [`SQLITE_AUTH_IMPLEMENTATION.md` §11](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md#11-flux-console-iframe-login-integration). **Blocked on this repo's SPA build (task 50) and dashboard auth endpoints (SQLITE_AUTH_IMPLEMENTATION.md).** | ⬜ Blocked |
 
 ### Dashboard Card (Actual Implementation)
 
 The dashboard already has two Flux-related views:
 
-1. **Admin/Global Command card** (`flux-console-card`) — opens the SPA in a new window
+1. **Admin/Global Command card** (`flux-console-card`) — opens the SPA in an iframe modal
 2. **Dedicated Flux mesh view** (`view_flux.html`, ~680 lines) — tenant picker, service table with sorting/filtering, topology tab, status badges, latency display, auto-refresh (30s)
 
 ### What the Dashboard Built Beyond Phase 8
@@ -352,12 +381,12 @@ Our changes are narrow (branding, auth integration, asset swap) so conflicts sho
 | 2 — Rename Angular Projects | 6–15 | 9/10 | `angular.json`, `tsconfig`, `package.json`, directory renames, imports | ✅ Done (build verify pending Node.js) |
 | 3 — Visual Rebrand | 16–23 | 8/8 | Assets, templates, SCSS | ✅ Done (placeholder artwork — replace with final) |
 | 4 — String Rebrand | 24–28 | 5/5 | All source files | ✅ Done — API protocol strings preserved |
-| 5 — Auth Integration | 29–33 | 0/5 | Auth service, environment config, proxy wiring | Medium — dashboard proxy handles the hard part |
+| 5 — Auth Integration | 29–34c | 0/8 | Auth service, environment config, SQLite password login, credentials, logout, session expiry | Medium — requires dashboard backend changes from [`SQLITE_AUTH_IMPLEMENTATION.md`](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md) |
 | 6 — Docs & Metadata | 34–42 | 0/9 | Root docs, `package.json` | None |
 | 7 — CI/CD & Docker | 43–49 | 0/7 | Workflows, Dockerfile, scripts | Low |
 | 8 — Dashboard Integration | 50–54 | 3/5 | Dashboard repo (not this repo) | Low — mostly done, blocked on SPA build |
 
-**Overall: 30/54 tasks complete (~56%). This repo's work: 27/49 (~55%).**
+**Overall: 30/57 tasks complete (~53%). This repo's work: 27/52 (~52%).**
 **Dashboard integration (Phase 8): 3/5 done — waiting on this repo's SPA output.**
 
 ### Critical Path
@@ -366,10 +395,11 @@ The fastest path to a working Flux Console:
 
 1. **Phase 1** — finish setup (tasks 3–5)
 2. **Phase 2** — rename Angular projects (tasks 6–15) — this is the riskiest step
-3. **Phase 5** — wire auth to dashboard proxy (tasks 29–33) — unlocks end-to-end testing
-4. **Phase 3 + 4** — visual + string rebrand (can be done incrementally)
-5. **Phase 6 + 7** — docs/CI cleanup (low priority, no runtime impact)
-6. **Phase 8, task 50** — copy built SPA into dashboard, replacing placeholder
+3. **Dashboard: implement [`SQLITE_AUTH_IMPLEMENTATION.md`](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md)** — adds `password_hash` column, `sessions` table, `/api/flux/auth/*` endpoints, `ValidateFluxRequest()` helper. **Must be done before Phase 5.**
+4. **Phase 5** — wire Flux Console SPA to SQLite password login (tasks 29–34c) — unlocks end-to-end testing
+5. **Phase 3 + 4** — visual + string rebrand (can be done incrementally)
+6. **Phase 6 + 7** — docs/CI cleanup (low priority, no runtime impact)
+7. **Phase 8, task 50** — copy built SPA into dashboard, replacing placeholder
 
 ---
 
@@ -384,6 +414,8 @@ Before starting, ensure these are available:
 - [ ] GHCR write access on `embernet-ai` org
 - [ ] Embernet logo assets (SVG, PNG) and brand color palette (hex codes)
 - [ ] Dashboard repo (`embernet-ai/industrial-dashboard`) available — **Phase 8 is mostly done there already**
+- [ ] Dashboard backend auth endpoints implemented per [`SQLITE_AUTH_IMPLEMENTATION.md`](../industrial-dashboard/SQLITE_AUTH_IMPLEMENTATION.md) — required for Phase 5
+- [ ] At least one user has a `password_hash` set in the SQLite `users` table — needed to test Flux Console login
 
 ## Appendix: Key Files in This Repo
 
@@ -398,8 +430,8 @@ Reference for where branding-relevant code lives (all paths relative to repo roo
 | `projects/flux-console/` | The SPA entry point | Phase 2–4 |
 | `projects/flux-console-lib/src/lib/assets/` | Images, banners, icons (ZAC branding) | Phase 3 |
 | `projects/flux-console/src/index.html` | SPA entry HTML (`<title>`, favicon) | Phase 3 |
-| `projects/flux-console/src/app/login/` | Login service + component | Phase 5 |
-| `projects/flux-console-lib/src/lib/services/auth.service.ts` | OAuth/auth service | Phase 5 |
+| `projects/flux-console/src/app/login/` | Login service + component — replace with Flux password login form (`POST /api/flux/auth/login`), add auto-session check (`GET /api/flux/auth/me`) | Phase 5 |
+| `projects/flux-console-lib/src/lib/services/auth.service.ts` | Auth service — replace Ziti Controller `POST /authenticate` with `POST /api/flux/auth/login` (SQLite password) | Phase 5 |
 | `projects/flux-console/src/app/app.module.ts` | Root module — imports `OpenZitiConsoleLibModule`, `flux-console-lib` | Phase 2 + 4 |
 | `projects/flux-console-lib/src/lib/ziti-console.constants.ts` | DI tokens: `ZITI_URLS`, `ZITI_NAVIGATOR` | Phase 4 (user-facing labels only) |
 | `projects/flux-console-lib/src/lib/ziti-console-lib.module.ts` | Lib module class: `OpenZitiConsoleLibModule` | Phase 2 + 4 |

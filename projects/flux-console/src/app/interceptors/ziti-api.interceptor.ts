@@ -16,153 +16,96 @@
 
 import {Injectable, Inject} from '@angular/core';
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import {map} from 'rxjs/operators';
 
-import {BehaviorSubject, filter, finalize, Observable, of, switchMap, take, EMPTY, catchError, throwError} from 'rxjs';
+import {Observable, catchError, throwError} from 'rxjs';
 import {
     SettingsServiceClass,
-    LoginServiceClass,
     SETTINGS_SERVICE,
     ZAC_LOGIN_SERVICE,
-    GrowlerModel,
-    GrowlerService,
-    LoginDialogComponent
 } from "flux-console-lib";
-import moment from "moment/moment";
 import {Router} from "@angular/router";
-import {MatDialog} from "@angular/material/dialog";
+import {FluxAuthService} from '../login/flux-auth.service';
 
-import {defer} from 'lodash';
-
-/** Pass untouched request through to the next request handler. */
+/**
+ * HTTP interceptor for the Flux Console iframe deployment.
+ *
+ * Responsibilities:
+ * - Adds `withCredentials: true` to all /api/flux/ requests so the
+ *   _flux_session cookie is sent with every request.
+ * - Sets Content-Type and Accept headers.
+ * - Handles 401 responses by clearing the session and redirecting
+ *   to the login form (session expired or revoked).
+ *
+ * Does NOT add zt-session headers — the dashboard proxy authenticates
+ * to the Flux controller using its own mTLS identity.
+ */
 @Injectable({
     providedIn: 'root'
 })
 export class ZitiApiInterceptor implements HttpInterceptor {
 
-    dialogRef: any;
-    doingCertRefresh = false;
-    retryRequestQue: any[] = [];
+    private redirectingToLogin = false;
 
-    constructor(@Inject(SETTINGS_SERVICE) private settingsService: SettingsServiceClass,
-                @Inject(ZAC_LOGIN_SERVICE) private loginService: LoginServiceClass,
-                private router: Router,
-                private growlerService: GrowlerService,
-                private dialogForm: MatDialog,
-                ) {
+    constructor(
+        @Inject(SETTINGS_SERVICE) private settingsService: SettingsServiceClass,
+        @Inject(ZAC_LOGIN_SERVICE) private loginService: FluxAuthService,
+        private router: Router,
+    ) {}
 
-    }
-
-    private handleErrorResponse(err: HttpErrorResponse, req?, next?: HttpHandler): Observable<any> {
-        if (err.status === 401) {
-            if (this.doingCertRefresh || this.loginService.loginDialogOpen) {
-                return new Observable((observer) => {
-                    this.retryRequestQue.push({ req, next, observer });
-                });
-            }
-            if (this.loginService.isCertBasedAuth || !this.loginService.certBasedAttempted) {
-                this.doingCertRefresh = true;
-                return this.loginService.observeLogin(this.loginService.serviceUrl, undefined, undefined, false).pipe(
-                    switchMap(body => {
-                        this.doingCertRefresh = false;
-                        this.retryRequestQue.forEach((failedRequest) => {
-                            this.retryFailedRequest(failedRequest);
-                        });
-                        this.retryRequestQue = [];
-                        return next.handle(this.addAuthToken(req));
-                    })
-                ).pipe(catchError(err => {
-                    this.doingCertRefresh = false;
-                    this.retryRequestQue = [];
-                    this.showLoginDialog(err);
-                    return throwError(() => err);
-                }));
-            }
-            this.showLoginDialog(err);
-            return new Observable((observer) => {
-                this.retryRequestQue.push({ req, next, observer });
-            });
+    intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+        // Don't modify auth endpoint requests (they handle their own credentials)
+        if (this.isAuthEndpoint(req)) {
+            return next.handle(req);
         }
-        return throwError(() => err);
-    }
 
-    private retryFailedRequest(queuedRequest: any): void {
-        const { req, next, observer } = queuedRequest;
-        next.handle(this.addAuthToken(req)).subscribe(
-            (response) => observer.next(response),
-            (error) => observer.error(error)
+        // Clone request with withCredentials and proper headers
+        const modifiedReq = this.addCredentials(req);
+        return next.handle(modifiedReq).pipe(
+            catchError((err: HttpErrorResponse) => this.handleErrorResponse(err))
         );
     }
 
-    intercept(req: HttpRequest<any>, next: HttpHandler):
-        Observable<HttpEvent<any>> {
-
-        if (this.isUnauthenticatedResource(req)) {
-            return next.handle(req);
-        } else {
-            return next.handle(this.addAuthToken(req)).pipe(catchError(err=> this.handleErrorResponse(err, req, next)));
-        }
+    /**
+     * Auth endpoints (/api/flux/auth/*) are handled directly by
+     * FluxAuthService with their own withCredentials setting.
+     */
+    private isAuthEndpoint(req: HttpRequest<any>): boolean {
+        return req.url.includes('/api/flux/auth/');
     }
 
-    isUnauthenticatedResource(req: HttpRequest<any>) {
-        if (
-            !req.url.startsWith("http")
-            || req.url.indexOf(this.settingsService?.settings?.selectedEdgeController) < 0
-            || req.url.indexOf("authenticate") > 0
-            || req.url.indexOf("version") > 0
-            || (req.url.indexOf("edge/client/v1/external-jwt-signers") > 0 && req.method)
-        ) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+    /**
+     * Add withCredentials: true so the _flux_session cookie is sent,
+     * and set default Content-Type / Accept headers.
+     */
+    private addCredentials(request: HttpRequest<any>): HttpRequest<any> {
+        const contentType = request.headers.get('Content-Type') || 'application/json';
+        const acceptHeader = request.headers.get('Accept') || 'application/json';
 
-    showLoginDialog(err) {
-        this.loginService.loginDialogOpen = true;
-        this.dialogRef = this.dialogForm.open(LoginDialogComponent, {
-            data: {},
-            autoFocus: false,
-        });
-        this.dialogRef.afterClosed().toPromise().then((result: any) => {
-            if (result?.isLoggedIn) {
-                this.retryRequestQue.forEach((failedRequest) => {
-                    this.retryFailedRequest(failedRequest);
-                });
-                this.retryRequestQue = [];
-                return true;
-            } else if (result?.returnToLogin) {
-                // User is unauthorized. redirect user back to login page
-                defer(() => {
-                    this.dialogRef.closeAll();
-                });
-                if (this.settingsService?.settings?.session) {
-                    this.settingsService.settings.session.id = undefined;
-                    this.settingsService.settings.session.expiresAt = undefined;
-                    this.settingsService.set(this.settingsService.settings);
-                }
-                this.router.navigate(['/login']);
-                this.retryRequestQue = [];
-                return err.message;
-            } else {
-                this.retryRequestQue = [];
-                return false;
+        return request.clone({
+            withCredentials: true,
+            setHeaders: {
+                'Content-Type': contentType,
+                'Accept': acceptHeader,
             }
         });
     }
 
-    private addAuthToken(request: any) {
-        const session = this.settingsService.settings.session;
-        const contentType = request.headers.get('Content-Type') || 'application/json';
-        let headers: any = {'content-type': contentType};
-        if (session?.id) {
-            headers = {"zt-session": session.id, 'content-type': contentType};
+    /**
+     * Handle HTTP error responses. On 401 (session expired/revoked),
+     * clear local session state and redirect to the login form.
+     * This handles task 5.7 — graceful session expiry.
+     */
+    private handleErrorResponse(err: HttpErrorResponse): Observable<never> {
+        if (err.status === 401 && !this.redirectingToLogin) {
+            this.redirectingToLogin = true;
+            // Clear local session state
+            this.loginService.clearSession().then(() => {
+                this.router.navigate(['/login']);
+                // Reset flag after navigation completes
+                setTimeout(() => { this.redirectingToLogin = false; }, 1000);
+            });
         }
-        const acceptHeader = request.headers.get('Accept');
-        if (!acceptHeader) {
-            headers.accept = 'application/json';
-        }
-        return request.clone({setHeaders: headers});
+        return throwError(() => err);
     }
 }
 

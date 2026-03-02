@@ -1,5 +1,5 @@
 /*
-    Copyright NetFoundry Inc.
+    Copyright Fireball Industries
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -14,11 +14,10 @@
     limitations under the License.
 */
 
-import {Inject, Component, OnDestroy, OnInit} from '@angular/core';
+import { Inject, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import {AuthService, SettingsServiceClass, LoginServiceClass, ZitiDataService, SETTINGS_SERVICE, ZAC_LOGIN_SERVICE, ZITI_DATA_SERVICE} from "flux-console-lib";
-import {Subscription} from "rxjs";
-import {delay, isEmpty, isNil, get} from "lodash";
+import { LoginServiceClass, SettingsServiceClass, SETTINGS_SERVICE, ZAC_LOGIN_SERVICE } from 'flux-console-lib';
+import { FluxAuthService } from './flux-auth.service';
 
 @Component({
     selector: 'app-login',
@@ -26,215 +25,53 @@ import {delay, isEmpty, isNil, get} from "lodash";
     styleUrls: ['./login.component.scss'],
     standalone: false
 })
-export class LoginComponent implements OnInit, OnDestroy {
-    edgeControllerList: any[] = [];
-    username = '';
+export class LoginComponent implements OnInit {
+    email = '';
     password = '';
-    edgeName: string = '';
-    edgeUrl: string = '';
-    userLogin = false;
-    selectedEdgeController: any;
-    controllerHostname = '';
-    edgeNameError = '';
-    edgeUrlError = '';
-    showEdge = false;
     isLoading = false;
-    extJwtSignersLoading = false;
-    helpText;
-    controllerInvalid = false;
-    extJwtSigners = [];
-    oauthLoading = '';
-    errors: any = {};
-    private subscription = new Subscription();
+    errorMessage = '';
 
     constructor(
-        @Inject(ZAC_LOGIN_SERVICE) public svc: LoginServiceClass,
+        @Inject(ZAC_LOGIN_SERVICE) public svc: FluxAuthService,
         @Inject(SETTINGS_SERVICE) private settingsService: SettingsServiceClass,
-        @Inject(ZITI_DATA_SERVICE) private zitiService: ZitiDataService,
         private router: Router,
-        @Inject(AuthService) public authService: AuthService,
-        ) { }
+    ) {}
 
     ngOnInit() {
-        if (this.svc.originIsController !== false && this.svc.originIsController !== true) {
-            this.checkOriginForController();
-        } else {
-            this.initSettings();
-        }
+        // If already authenticated (session cookie valid), skip login
         if (this.settingsService.hasSession()) {
-            this.router.navigate(['/dashboard']);
+            this.router.navigate(['/']);
         }
-        this.subscription.add(
-        this.settingsService.settingsChange.subscribe((results: any) => {
-            if (results) this.settingsReturned(results);
-        }));
-        this.getExternalJwtSigners();
     }
 
-    checkOriginForController() {
-        this.isLoading = true;
-        this.svc.checkOriginForController().then((result) => {
-            this.svc.originIsController = result;
-            if (this.svc.originIsController) {
-                this.svc.originIsController = true;
-                this.selectedEdgeController = window.location.origin;
-                this.controllerHostname = window.location.hostname;
-                this.settingsService.addContoller(this.controllerHostname, this.selectedEdgeController);
-            } else {
-                this.edgeChanged();
-                this.initSettings();
-            }
-        }).finally(() => {
-            this.isLoading = false;
-        });
-    }
+    /**
+     * Handle login form submission.
+     * POSTs to /api/flux/auth/login with email + password.
+     * On success, the backend sets the _flux_session cookie and
+     * we navigate to the dashboard.
+     */
+    async login() {
+        this.errorMessage = '';
 
-    getExternalJwtSigners() {
-        this.extJwtSigners = [];
-        if (isEmpty(this.settingsService.settings.selectedEdgeController) || !this.settingsService.allowControllerAdd) {
+        if (!this.email.trim() || !this.password) {
+            this.errorMessage = 'Email and password are required';
             return;
         }
-        this.extJwtSignersLoading = true;
-        this.zitiService.get('external-jwt-signers', this.zitiService.DEFAULT_PAGING, [], undefined, true).then((results) => {
-            this.extJwtSigners = results.data || [];
-        }).finally(() => {
-            this.extJwtSignersLoading = false;
-        })
-    }
 
-    handleOAuthLogin(extJwtSigner: any) {
-        this.oauthLoading = extJwtSigner.name;
-        this.authService.configureOAuth(extJwtSigner).then((result) => {
-            if (result?.success) {
-                delay(() => {
-                    this.oauthLoading = '';
-                }, 4000);
-            } else {
-                delay(() => {
-                    this.oauthLoading = '';
-                }, 700);
-            }
-        });
-    }
-
-    login() {
-        if(this.selectedEdgeController) {
-            const apiVersions = this.settingsService.apiVersions;
-            const prefix = apiVersions && apiVersions["edge-management"]?.v1?.path || '';
-            this.svc.login(
-                prefix,
-                this.selectedEdgeController,
-                this.username.trim(),
-                this.password
-            ).then((result) => {
-                if (result.error) {
-                    return;
-                }
-                this.settingsService.settings.selectedEdgeController = this.selectedEdgeController;
-                this.settingsService.set(this.settingsService.settings);
-            }).catch((error) => {
-                this.handleControllerInvalid(error?.controllerInvalid);
-            });
+        this.isLoading = true;
+        try {
+            await this.svc.login('', '', this.email, this.password, true);
+        } catch (err: any) {
+            this.errorMessage = err?.error || 'Login failed. Please try again.';
+        } finally {
+            this.isLoading = false;
         }
     }
 
-    handleControllerInvalid(controllerInvalid = false) {
-        if (controllerInvalid) {
-            this.helpText = `NOTE: The controller url is relative to the server running the Flux Console. \n
-                    For example, if you are running the Flux controller and Flux Console inside docker, the controller URL should be reachable from the same server that's hosting Flux Console. \n
-                    In this case, that would be the hostname of the container running the Flux controller image. \n `;
-            this.controllerInvalid = true;
-        } else {
-            this.helpText = undefined;
-            this.controllerInvalid = false;
+    /** Allow Enter key to submit the form */
+    onKeyUp(event: KeyboardEvent) {
+        if (event.key === 'Enter') {
+            this.login();
         }
-    }
-    next() {
-        this.login();
-    }
-
-    create() {
-        if (this.isValid()) {
-            this.settingsService.addContoller(this.edgeName, this.edgeUrl).then((result) => {
-                if (result.error) {
-                    this.handleControllerInvalid(true);
-                    return;
-                }
-                this.selectedEdgeController = this.edgeUrl;
-                this.settingsService.set(this.settingsService.settings);
-            });
-        }
-    }
-
-    isValid() {
-        this.edgeNameError = '';
-        this.edgeUrlError = '';
-        if (this.edgeName.trim().length == 0) this.edgeNameError = '';
-        if (this.edgeUrl.trim().length == 0) this.edgeUrlError = '';
-        return!(this.edgeNameError || this.edgeUrlError);
-    }
-
-    reset() {
-        this.edgeNameError = '';
-        this.edgeUrlError = '';
-        this.userLogin = true;
-        this.getExternalJwtSigners();
-    }
-
-    edgeChanged(event?) {
-        this.edgeNameError = '';
-        this.edgeUrlError = '';
-        if (this.selectedEdgeController) {
-            this.edgeName = ''
-            this.edgeUrl = ''
-            this.userLogin = true;
-            this.settingsService.initApiVersions(this.selectedEdgeController);
-        } else if (this.settingsService.allowControllerAdd) {
-            this.userLogin = false;
-        }
-        this.settingsService.settings.selectedEdgeController = this.selectedEdgeController;
-        this.getExternalJwtSigners();
-    }
-
-    initSettings() {
-        this.settingsService.loadSettings();
-    }
-
-    settingsReturned(settings: any) {
-        this.edgeControllerList = [];
-        if (settings.edgeControllers?.length > 0) {
-            this.edgeControllerList = [];
-            settings.edgeControllers.forEach((controller) => {
-                this.edgeControllerList.push({name:controller.name + ` (${controller.url})`, value: controller.url});
-            });
-            this.reset();
-        } else {
-            this.userLogin = false;
-        }
-        this.selectedEdgeController = settings.selectedEdgeController;
-    }
-
-    ngOnDestroy(): void {
-        this.subscription.unsubscribe();
-    }
-
-    usernameChange(event) {
-        this.username = event.currentTarget.value;
-    }
-
-    passwordChange(event) {
-        this.password = event.currentTarget.value;
-    }
-
-    get showAddController() {
-        return !this.showNoControllers && (this.edgeControllerList.length===0 || !this.userLogin);
-    }
-
-    get showNoControllers() {
-        return this.edgeControllerList.length===0 && !this.svc.originIsController && !this.svc.checkingControllerOrigin && !this.settingsService.allowControllerAdd;
-    }
-
-    get controllerSelectPlaceholder() {
-        return this.settingsService.allowControllerAdd ? 'Add a New Flux Controller' : 'Select an Flux Controller';
     }
 }

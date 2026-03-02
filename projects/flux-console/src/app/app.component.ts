@@ -20,6 +20,7 @@ import { SimpleZitiDomainControllerService} from './services/simple-ziti-domain-
 import { Router } from '@angular/router';
 import {MatDialog} from "@angular/material/dialog";
 import {ZAC_VERSION} from "flux-console-lib";
+import {FluxAuthService} from './login/flux-auth.service';
 
 @Component({
     selector: 'app-root',
@@ -42,7 +43,7 @@ export class AppComponent implements OnInit {
     constructor(
         @Inject(SETTINGS_SERVICE) private settingsService: SettingsServiceClass,
         @Inject(ZITI_DOMAIN_CONTROLLER) private zitiControllerService: SimpleZitiDomainControllerService,
-        @Inject(ZAC_LOGIN_SERVICE) private loginService: LoginServiceClass,
+        @Inject(ZAC_LOGIN_SERVICE) private loginService: FluxAuthService,
         private router: Router,
         private dialogRef: MatDialog
     ) {}
@@ -57,25 +58,24 @@ export class AppComponent implements OnInit {
             this.checkSession();
             this.handleUserSettings();
         });
-        this.checkOriginForController();
     }
 
+    /**
+     * Check session state. The FluxAuthService.init() already called
+     * GET /api/flux/auth/me during APP_INITIALIZER. If a valid session
+     * was found, settings.session.id is set and hasSession() returns true.
+     * Otherwise, navigate to /login.
+     */
     async checkSession() {
         this.isAuthorized = this.settingsService.hasSession();
         const url = window.location.href;
         const path = url.split("?")[0];
-        if (!this.isAuthorized && path.indexOf('callback') < 0) {
+        if (!this.isAuthorized && path.indexOf('login') < 0) {
             this.loginService.loginDialogOpen = false;
             this.dialogRef.closeAll();
             this.router.navigate(['/login']);
         }
         return Promise.resolve();
-    }
-
-    checkOriginForController() {
-        this.loginService.checkOriginForController().then((result) => {
-            this.loginService.originIsController = result;
-        });
     }
 
     handleUserSettings() {

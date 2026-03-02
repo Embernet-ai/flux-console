@@ -63,7 +63,7 @@ import {ZitiApiInterceptor} from "./interceptors/ziti-api.interceptor";
 import {LoggerModule, NgxLoggerLevel} from "ngx-logger";
 import {ErrorInterceptor} from "./interceptors/error-handler.interceptor";
 import {LoggingInterceptor} from "./interceptors/logging.interceptor";
-import {ControllerLoginService} from "./login/controller-login.service";
+import {FluxAuthService} from "./login/flux-auth.service";
 import {NodeLoginService} from "./login/node-login.service";
 import {NodeSettingsService} from "./services/node-settings.service";
 import {NoopHttpInterceptor} from "./interceptors/noop-http.interceptor";
@@ -77,7 +77,7 @@ if (environment.nodeIntegration) {
     settingsService = NodeSettingsService;
     apiInterceptor = NodeApiInterceptor;
 }else {
-    loginService = ControllerLoginService;
+    loginService = FluxAuthService;
     zitiDataService = ZitiControllerDataService;
     settingsService = SettingsService;
     apiInterceptor = ZitiApiInterceptor;
