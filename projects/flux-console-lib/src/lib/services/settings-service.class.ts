@@ -58,7 +58,7 @@ export abstract class SettingsServiceClass {
     rejectUnauthorized = false;
     port = DEFAULTS.port;
     portTLS = DEFAULTS.portTLS;
-    apiVersions: any[] = [];
+    apiVersions: any = {};
     protocol = DEFAULTS.protocol;
     host = DEFAULTS.host;
     httpClient: HttpClient;

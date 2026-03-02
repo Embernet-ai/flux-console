@@ -5,12 +5,12 @@ on:
 name: Create Releases
 
 permissions:
-  id-token: write  # Required for OIDC. see https://docs.npmjs.com/trusted-publishers#supported-cicd-providers
+  id-token: write
   contents: read
 
 jobs:
-  build-and-publish-app-ziti-console:
-    if: startsWith(github.event.release.name, 'app-ziti-console-v')
+  build-and-publish-flux-console:
+    if: startsWith(github.event.release.name, 'flux-console-v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,27 +21,27 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           registry-url: https://npm.pkg.github.com/
-      - name: build and upload ziti-console.zip as SPA for use with controller
+      - name: Build and upload flux-console-spa.zip as SPA artifact
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         run: |
-          ./build.sh /zac/
-          cd dist/app-ziti-console && zip -r ziti-console.zip *
-          gh release upload ${{github.event.release.tag_name}} ziti-console.zip
+          ./build.sh
+          cd dist/flux-console && zip -r flux-console-spa.zip *
+          gh release upload ${{github.event.release.tag_name}} flux-console-spa.zip
 
-  build-and-publish-ziti-console-lib:
-    if: startsWith(github.event.release.name, 'ziti-console-lib-v')
+  build-and-publish-flux-console-lib:
+    if: startsWith(github.event.release.name, 'flux-console-lib-v')
     runs-on: ubuntu-latest
     env:
       BUILD_CONFIG: "Release"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           registry-url: 'https://registry.npmjs.org'
 
       - name: Set VERSION Environment Variable
@@ -52,6 +52,6 @@ jobs:
           VERSION=$(echo "${{ github.event.release.name }}" | grep -oP '^.*-v(.*)$')
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-      - name: Build and Publish Shared Library - ziti-console-lib
-        if: github.repository_owner == 'openziti'
+      - name: Build and Publish Shared Library - flux-console-lib
+        if: github.repository_owner == 'embernet-ai'
         run: ./publishSharedLib.sh
