@@ -4,46 +4,46 @@
   "newProjectRoot": "projects",
 
   "projects": {
-    "ziti-console": {
+    "flux-console": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
           "style": "scss"
         }
       },
-      "root": "projects/app-ziti-console",
-      "sourceRoot": "projects/app-ziti-console/src",
+      "root": "projects/flux-console",
+      "sourceRoot": "projects/flux-console/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/app-ziti-console",
-            "index": "projects/app-ziti-console/src/index.html",
-            "main": "projects/app-ziti-console/src/main.ts",
+            "outputPath": "dist/flux-console",
+            "index": "projects/flux-console/src/index.html",
+            "main": "projects/flux-console/src/main.ts",
             "polyfills": [
               "zone.js"
             ],
-            "tsConfig": "projects/app-ziti-console/tsconfig.app.json",
+            "tsConfig": "projects/flux-console/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/app-ziti-console/src/favicon.ico",
-              "projects/app-ziti-console/src/assets",
+              "projects/flux-console/src/favicon.ico",
+              "projects/flux-console/src/assets",
               {
                 "glob": "**/*",
-                "input": "./node_modules/ziti-console-lib/assets/",
+                "input": "./node_modules/flux-console-lib/assets/",
                 "output": "/assets"
               },
               {
                 "glob": "**/*",
-                "input": "./node_modules/ziti-console-lib/html/",
+                "input": "./node_modules/flux-console-lib/html/",
                 "output": "/assets/pages"
               }
             ],
             "styles": [
-              "projects/ziti-console-lib/src/lib/shared-assets/styles/global.scss",
-              "projects/ziti-console-lib/src/lib/shared-assets/styles/icons.scss",
-              "projects/app-ziti-console/src/styles.scss",
+              "projects/flux-console-lib/src/lib/shared-assets/styles/global.scss",
+              "projects/flux-console-lib/src/lib/shared-assets/styles/icons.scss",
+              "projects/flux-console/src/styles.scss",
               "node_modules/primeicons/primeicons.css"
             ],
             "scripts": [],
@@ -109,8 +109,8 @@
             "nodeIntegration": {
               "fileReplacements": [
                 {
-                  "replace": "projects/app-ziti-console/src/app/environments/environment.ts",
-                  "with": "projects/app-ziti-console/src/app/environments/environment.node.ts"
+                  "replace": "projects/flux-console/src/app/environments/environment.ts",
+                  "with": "projects/flux-console/src/app/environments/environment.node.ts"
                 }
               ],
               "budgets": [
@@ -139,10 +139,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "ziti-console:build:production"
+              "buildTarget": "flux-console:build:production"
             },
             "development": {
-              "buildTarget": "ziti-console:build:development"
+              "buildTarget": "flux-console:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -150,7 +150,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "ziti-console:build"
+            "buildTarget": "flux-console:build"
           }
         },
         "test": {
@@ -160,60 +160,60 @@
               "zone.js",
               "zone.js/testing"
             ],
-            "tsConfig": "projects/app-ziti-console/tsconfig.spec.json",
+            "tsConfig": "projects/flux-console/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/app-ziti-console/src/favicon.ico",
-              "projects/app-ziti-console/src/assets"
+              "projects/flux-console/src/favicon.ico",
+              "projects/flux-console/src/assets"
             ],
             "styles": [
-              "projects/app-ziti-console/src/styles.scss"
+              "projects/flux-console/src/styles.scss"
             ],
             "scripts": []
           }
         }
       }
     },
-    "ziti-console-node": {
+    "flux-console-node": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
           "style": "scss"
         }
       },
-      "root": "projects/app-ziti-console",
-      "sourceRoot": "projects/app-ziti-console/src",
+      "root": "projects/flux-console",
+      "sourceRoot": "projects/flux-console/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/app-ziti-console-node",
-            "index": "projects/app-ziti-console/src/index.html",
-            "main": "projects/app-ziti-console/src/main.ts",
+            "outputPath": "dist/flux-console-node",
+            "index": "projects/flux-console/src/index.html",
+            "main": "projects/flux-console/src/main.ts",
             "polyfills": [
               "zone.js"
             ],
-            "tsConfig": "projects/app-ziti-console/tsconfig.app.json",
+            "tsConfig": "projects/flux-console/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/app-ziti-console/src/favicon.ico",
-              "projects/app-ziti-console/src/assets",
+              "projects/flux-console/src/favicon.ico",
+              "projects/flux-console/src/assets",
               {
                 "glob": "**/*",
-                "input": "./node_modules/ziti-console-lib/assets/",
+                "input": "./node_modules/flux-console-lib/assets/",
                 "output": "/assets"
               },
               {
                 "glob": "**/*",
-                "input": "./node_modules/ziti-console-lib/html/",
+                "input": "./node_modules/flux-console-lib/html/",
                 "output": "/assets/pages"
               }
             ],
             "styles": [
-              "projects/ziti-console-lib/src/lib/shared-assets/styles/global.scss",
-              "projects/ziti-console-lib/src/lib/shared-assets/styles/icons.scss",
-              "projects/app-ziti-console/src/styles.scss",
+              "projects/flux-console-lib/src/lib/shared-assets/styles/global.scss",
+              "projects/flux-console-lib/src/lib/shared-assets/styles/icons.scss",
+              "projects/flux-console/src/styles.scss",
               "node_modules/primeicons/primeicons.css"
             ],
             "scripts": [],
@@ -250,8 +250,8 @@
               },
               "fileReplacements": [
                 {
-                  "replace": "projects/app-ziti-console/src/app/environments/environment.ts",
-                  "with": "projects/app-ziti-console/src/app/environments/environment.node.ts"
+                  "replace": "projects/flux-console/src/app/environments/environment.ts",
+                  "with": "projects/flux-console/src/app/environments/environment.node.ts"
                 }
               ]
             },
@@ -274,8 +274,8 @@
               },
               "fileReplacements": [
                 {
-                  "replace": "projects/app-ziti-console/src/app/environments/environment.ts",
-                  "with": "projects/app-ziti-console/src/app/environments/environment.node.ts"
+                  "replace": "projects/flux-console/src/app/environments/environment.ts",
+                  "with": "projects/flux-console/src/app/environments/environment.node.ts"
                 }
               ]
             }
@@ -286,10 +286,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "ziti-console:build:production"
+              "buildTarget": "flux-console:build:production"
             },
             "development": {
-              "buildTarget": "ziti-console:build:development"
+              "buildTarget": "flux-console:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -297,7 +297,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "ziti-console:build"
+            "buildTarget": "flux-console:build"
           }
         },
         "test": {
@@ -307,37 +307,37 @@
               "zone.js",
               "zone.js/testing"
             ],
-            "tsConfig": "projects/app-ziti-console/tsconfig.spec.json",
+            "tsConfig": "projects/flux-console/tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              "projects/app-ziti-console/src/favicon.ico",
-              "projects/app-ziti-console/src/assets"
+              "projects/flux-console/src/favicon.ico",
+              "projects/flux-console/src/assets"
             ],
             "styles": [
-              "projects/app-ziti-console/src/styles.scss"
+              "projects/flux-console/src/styles.scss"
             ],
             "scripts": []
           }
         }
       }
     },
-    "ziti-console-lib": {
+    "flux-console-lib": {
       "projectType": "library",
-      "root": "projects/ziti-console-lib",
-      "sourceRoot": "projects/ziti-console-lib/src",
+      "root": "projects/flux-console-lib",
+      "sourceRoot": "projects/flux-console-lib/src",
       "prefix": "lib",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:ng-packagr",
           "options": {
-            "project": "projects/ziti-console-lib/ng-package.json"
+            "project": "projects/flux-console-lib/ng-package.json"
           },
           "configurations": {
             "production": {
-              "tsConfig": "projects/ziti-console-lib/tsconfig.lib.prod.json"
+              "tsConfig": "projects/flux-console-lib/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "projects/ziti-console-lib/tsconfig.lib.json"
+              "tsConfig": "projects/flux-console-lib/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "development"
@@ -345,7 +345,7 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "tsConfig": "projects/ziti-console-lib/tsconfig.spec.json",
+            "tsConfig": "projects/flux-console-lib/tsconfig.spec.json",
             "polyfills": [
               "zone.js",
               "zone.js/testing"
