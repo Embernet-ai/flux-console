@@ -1,0 +1,22 @@
+<div id="ResetModal" class="reset-enrollment-container modal" style="height: fit-content;">
+    <div class="close icon-close" (click)="cancel()"></div>
+    <div class="reset-title-container">
+        <div class="title">{{type === 'reset' ? 'Reset' : 'Reissue'}} Enrollment</div>
+        <div class="subtitle">Select a date to {{type === 'reset' ? 'reset' : 'reissue'}} the enrollment token</div>
+    </div>
+    <div class="reset-content-container">
+        <label>Date Enrollment Expires</label>
+        <div class="reset-datetime-container">
+            <lib-date-time-picker
+                [(ngModel)]="dateValue"
+                [minDate]="minDate"
+                [closeOnDateSelect]="true"
+                placeholder="Select Expiration Date & Time"
+            ></lib-date-time-picker>
+        </div>
+    </div>
+    <div class="reset-buttons-container">
+        <div class="linkButton cancel" (click)="cancel()">Oops, no get me out of here</div>
+        <div id="ResetEnrollButton" class="button" (click)="handleAction()">Submit</div>
+    </div>
+</div>

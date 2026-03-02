@@ -1,0 +1,67 @@
+<div id="OverrideModal" class="overrides-wrapper">
+  <div class="overrides-container sized large">
+    <div class="form-title-container">
+      <div class="form-title-back-button" (click)="close.emit()">
+        <div class="form-title-back-button-image"></div>
+        <div class="form-title-back-button-line"></div>
+      </div>
+      <span class="title">IDENTITY OVERRIDES</span>
+    </div>
+    <div class="subtitle">Manage the Service Config Identity Overrides</div>
+    @if (overrides.length > 0) {
+      <div class="darkened overrides">Current Overrides</div>
+    }
+    <div id="OverrideList" class="grid splitRemove overrides">
+      @for (override of overrides; track override) {
+        <div id="OverrideTemplate" class="row grid threedelete">
+          <div>{{override.service.name}}</div>
+          <div>{{override.config.name}}</div>
+          <div class="relative">
+            <div class="remove icon-minus removeAssoc" (click)="removeOverride(override)"></div>
+          </div>
+        </div>
+      }
+    </div>
+    <div class="darkened">ADD OVERRIDE CONFIG</div>
+    <div class="grid split override-list-container">
+      <div>
+        <label for="ServiceList">Service</label>
+        <lib-filter-select
+          #servicesList
+          id="ServiceList"
+          [options]="services"
+          [(ngModel)]="selectedServiceId"
+          placeholder="Select a service"
+          optionValue="id"
+          optionLabel="name"
+          [openOnFocus]="true"
+          (filterChange)="filterServicesDebounced($event)"
+        ></lib-filter-select>
+      </div>
+      <div>
+        <label for="ConfigList">Configuration</label>
+        <lib-filter-select
+          #configList
+          id="ConfigList"
+          [options]="configs"
+          [(ngModel)]="selectedConfigId"
+          placeholder="Select a config"
+          optionValue="id"
+          optionLabel="name"
+          [openOnFocus]="true"
+          (filterChange)="filterConfigsDebounced($event)"
+        ></lib-filter-select>
+      </div>
+    </div>
+    <div class="buttons">
+      <div
+        id="AssociateButton"
+        class="button confirm"
+        [ngClass]="{disabled: disableAddButton}"
+        (click)="addOverride()"
+        >
+        Add
+      </div>
+    </div>
+  </div>
+</div>

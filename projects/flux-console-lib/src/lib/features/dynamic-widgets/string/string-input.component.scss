@@ -1,0 +1,24 @@
+.string-input-container {
+  margin: var(--marginSmall) 0;
+
+  label {
+    margin-bottom: 0rem;
+    margin-top: 0rem;
+    width: fit-content;
+  }
+
+  input.error {
+    border-color:red;
+  }
+
+  div.error {
+    color:red
+  }
+}
+
+.label-container {
+  display: flex;
+  gap: 0.3125rem;
+  margin-bottom: 0.3125rem;
+  margin-top: 0.625rem;
+}

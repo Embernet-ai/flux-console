@@ -1,0 +1,23 @@
+<div class="multi-action-button-container">
+  @if (actions) {
+    <div class="form-field-action"
+      (clickOutside)="closeMoreActionsMenu()"
+      >
+      <div class="primary-action-button" (click)="actionClicked(actions[0])">{{actions[0].label}}</div>
+      @if (actions.length > 1) {
+        <div class="secondary-action-button"
+          (click)="showMoreActionsMenu()"
+          ><div class="secondary-actions-arrow icon-prev"></div></div>
+        }
+      </div>
+    }
+    @if (showMoreActions) {
+      <div class="multi-action-button-dropdown">
+        <ul>
+          @for (action of actions; track action) {
+            <li [hidden]="action.hidden" class="confirm-item-name" (click)="actionClicked(action)">{{action.label}}</li>
+          }
+        </ul>
+      </div>
+    }
+  </div>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400">
+  <!-- PLACEHOLDER: Replace with final Flux Console banner -->
+  <!-- Replaces ZAC.jpg banner -->
+  <!-- Product: Flux Console by Fireball Industries -->
+  <!-- Motto: Ignite your factory efficiency -->
+  <rect width="1200" height="400" fill="#1a1a2e"/>
+  <text x="600" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#00d4aa">⚡ Flux Console</text>
+  <text x="600" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#e0e0e0">Zero-Trust Network Administration</text>
+  <text x="600" y="290" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#888">Powered by Fireball Industries — Ignite your factory efficiency</text>
+  <text x="600" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#666">Part of the Embernet Platform — embernet.ai</text>
+</svg>
