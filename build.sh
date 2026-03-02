@@ -13,4 +13,4 @@ fi
 npm install
 npm install -g @angular/cli@16.0.0-next.0
 # WARN: deployUrl deprecated since Angular 13, pending decommission in future ng CLI
-ng build ziti-console --base-href "$1" --deploy-url "$1" --configuration "production"
+ng build flux-console --base-href "$1" --deploy-url "$1" --configuration "production"
