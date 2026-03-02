@@ -1,9 +1,0 @@
-<div class="form-field-extended-fields" [hidden]="showJsonView" (mouseup)="formDataChangedDebounced($event)" (keyup)="formDataChangedDebounced($event)" (clickOutside)="formDataChangedDebounced($event)">
-  <ng-container #dynamicform></ng-container>
-</div>
-@if (showJsonView && !hideConfigJSON) {
-  <lib-json-view (dataChange)="jsonDataChangedDebounced($event)" [(data)]="configData"></lib-json-view>
-}
-@if (showJsonView && hideConfigJSON) {
-  <lib-json-view [(data)]="configData"></lib-json-view>
-}
