@@ -1,152 +1,98 @@
-![Ziggy using the ziti-console](https://raw.githubusercontent.com/openziti/ziti-console/main/projects/ziti-console-lib/src/lib/assets/banners/ZAC.jpg)
+# ⚡ Flux Console
 
-<p align="center" width="100%">
-OpenZiti is a free and open source project focused on bringing zero trust to any application.
-     <br>
-The project provides all the pieces required to implement or integrate zero trust into your solutions.
-<br/>
-<br/>
-     <br>
-</p>
+**Flux Console** is the administrative web UI for the [Flux](https://github.com/Embernet-ai/flux-core) zero-trust overlay network, part of the [Embernet](https://embernet.ai) platform by Fireball Industries.
 
-<p align="center" width="100%">
-<a href="https://openziti.io"><img src="https://github.com/openziti/ziti-console/blob/main/projects/ziti-console-lib/src/lib/assets/icons/android-icon-192x192.png?raw=true" width="100"></a>
-</p>
+It provides a browser-based interface for managing identities, services, routers, policies, and other resources on a Flux Controller via the Edge Management API.
 
-<p align="center">
-    <b>
-    <a>@openziti/ziti-console</a>
-    <br>
-    <br>
-    </b>
-    This repo hosts the Ziti Admin Console, and is designed to provide a user interface to help you administrate an <a href="https://openziti.io">OpenZiti Network</a> via the <a href="https://openziti.io/docs/reference/developer/api/">Ziti Edge API</a>
-    <br>
-    <br>
-    <b>Part of the <a href="https://openziti.io/about">OpenZiti</a> ecosystem</b>
-</p>
-
-<p align="center">
-    <br>
-    <b>Interested in knowing how to easily embed programmable, high performance, zero trust networking into your application without VPNs?</b>
-    <br>
-    Learn more about <a href="https://openziti.io/about">OpenZiti</a> project.</b>
-    <br>
-    Also, checkout core project on <a href="https://github.com/openziti">github</a>
-<br/>
-<br/>
-Please star us!
-<br/>
-<a href="https://github.com/openziti/ziti/stargazers"><img src="https://img.shields.io/github/stars/openziti/ziti?style=flat" ></a>
-    </p>
-
----
-
-[![Issues](https://img.shields.io/github/issues-raw/openziti/ziti-console)](https://github.com/openziti/ziti-console/issues)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=rounded)](CONTRIBUTING.md)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.1%20adopted-ff69b4.svg)](CODE_OF_CONDUCT.md)
 
 ---
 
-# OpenZiti Console
+## Overview
 
-The OpenZiti Console is an administrative web interface for an OpenZiti network.
+Flux Console is deployed as a **static single-page application (SPA)** embedded in the [Embernet Dashboard](https://github.com/Embernet-ai/industrial-dashboard) at `/static/vendor/flux-console/`. It opens inside an iframe modal when an admin clicks the Flux Console card.
 
-## Deployments
+### Related Repositories
 
-Read the production deployment guides for the console as well as the controller, router, etc.
-
-[Link to deployment guides](https://openziti.io/docs/category/deployments/)
+| Repo | Purpose |
+|------|---------|
+| [`embernet-ai/flux-core`](https://github.com/Embernet-ai/flux-core) | Flux controller, router, tunnel — the zero-trust overlay runtime |
+| [`embernet-ai/flux-helm-charts`](https://github.com/Embernet-ai/flux-helm-charts) | Helm charts for deploying Flux components on Kubernetes |
+| [`embernet-ai/industrial-dashboard`](https://github.com/Embernet-ai/industrial-dashboard) | Embernet Dashboard — hosts the Flux Console SPA and proxies API calls |
 
 ## Requirements
 
-To build and run the application from source, you'll also need to make sure you have the following developer tools installed and available on your command line.
-
-| Tool        |      Version |
-| :---:       | :---:        |
-| Node.js     | >=18         |
-| npm         | >=8.1        |
-| ng          |  =16         |
+| Tool    | Version |
+|:-------:|:-------:|
+| Node.js | ≥ 18    |
+| npm     | ≥ 8.1   |
+| Angular CLI (`ng`) | 20 |
 
 ### Install Angular CLI
 
-This provides the `ng` command.
-
 ```bash
-npm install -g @angular/cli@16
+npm install -g @angular/cli@20
 ```
 
 ## Projects
 
-This repository houses two projects.
+This Angular monorepo contains two projects:
 
-1. [ziti-console-lib](./projects/ziti-console-lib) - Angular library used by the console UI.
-1. [app-ziti-console](./projects/app-ziti-console) - console UI with two deployment modes.
-1. Single page application mode (recommended)
-1. Node.js server mode (`server.js`, deprecated)
+1. [flux-console-lib](./projects/flux-console-lib) — Shared Angular library (components, services, API clients, assets).
+2. [flux-console](./projects/flux-console) — The SPA that imports the lib. This is what gets built and deployed.
 
 ## Build
 
 From the project root:
 
-1. Install both projects' dependencies and build the library.
+1. Install dependencies and build the library:
 
     ```bash
     npm install
     ```
 
-### Build the Single Page Application
-
-1. Build the console project with Angular.
+2. Build the SPA:
 
     ```bash
-    ng build ziti-console
+    ng build flux-console
     ```
 
-1. The single-page application assets are rendered in the `./dist/app-ziti-console` directory.
-1. use the Node server to preview changes.
+3. The built assets are output to `./dist/flux-console/`.
 
-### Build the Standalone Node Server
+### Development
 
-*Do not use this in production: [deployment guides](https://openziti.io/docs/category/deployments). This is a deprecated build and run mode temporarily preserved here for previewing local changes during development.*
-
-1. Build the console project with Angular.
+1. Watch-build the library:
 
     ```bash
-    ng build ziti-console-node
+    ng build flux-console-lib --watch
     ```
 
-1. If developing the standalone Node server, run it.
+2. Serve the SPA with live reload:
 
     ```bash
-    node server.js
+    ng serve flux-console
     ```
 
-1. Access the console at http://localhost:1408
-1. Configure the server with the URL of the controller's edge-management API, e.g. https://localhost:1280
+3. Access the console at http://localhost:4200
 
-## Developing with Angular
+## Authentication
 
-There are two elements to the Angular app.
+Flux Console authenticates via **SQLite password auth** (separate from the dashboard's Azure AD SSO). The auth flow uses a `_flux_session` cookie issued by the dashboard's `/api/flux/auth/login` endpoint. See [SQLITE_AUTH_IMPLEMENTATION.md](SQLITE_AUTH_IMPLEMENTATION.md) for details.
 
-From the project directory:
+## Deployment
 
-1. Install dependencies and build the library.
+The production deployment is a static SPA served by the Embernet Dashboard:
 
-    ```bash
-    npm install
-    ```
+1. Build: `ng build flux-console --configuration=production`
+2. Copy `dist/flux-console/*` → dashboard's `/static/vendor/flux-console/`
+3. All API calls route through the dashboard's `/api/flux/mgmt/*` proxy
 
-1. Continually build the library in **./dist/ziti-console-lib** by running the npm script **watch:lib**.
+## Attribution
 
-    ```bash
-    ng build ziti-console-lib --watch
-    ```
+Flux Console is based on [OpenZiti ZAC](https://github.com/openziti/ziti-console) (Ziti Administration Console), licensed under the [Apache License 2.0](LICENSE). Original copyright belongs to NetFoundry, Inc.
 
-   Note: The NPM library is referenced/linked in `package.json` as `"ziti-console-lib": "file:dist/ziti-console-lib"`. This library includes the javascript code shared with the console application and the Angular code shared with other applications.
+## License
 
-1. Continually build the deprecated Node server in **app-ziti-console-node** to preview changes.
-
-    ```bash
-    ng build ziti-console-node --watch
-    ```
+[Apache License 2.0](LICENSE) — see [LICENSE](LICENSE) for the full text.

@@ -19,7 +19,7 @@ import {SettingsServiceClass, LoginServiceClass, SETTINGS_SERVICE, ZITI_DOMAIN_C
 import { SimpleZitiDomainControllerService} from './services/simple-ziti-domain-controller.service';
 import { Router } from '@angular/router';
 import {MatDialog} from "@angular/material/dialog";
-import {ZAC_VERSION} from "flux-console-lib";
+import {FLUX_VERSION} from "flux-console-lib";
 import {FluxAuthService} from './login/flux-auth.service';
 
 @Component({
@@ -97,19 +97,19 @@ export class AppComponent implements OnInit {
             'client-theme'
         ) as HTMLLinkElement;
         if (themeLink) {
-            themeLink.href = `./assets/styles/dark.css?v=${ZAC_VERSION.version}`;
+            themeLink.href = `./assets/styles/dark.css?v=${FLUX_VERSION.version}`;
         } else {
             const style = document.createElement('link');
             style.id = 'client-theme';
             style.rel = 'stylesheet';
             style.type = 'text/css';
-            style.href = `./assets/styles/dark.css?v=${ZAC_VERSION.version}`; //<--add assets
+            style.href = `./assets/styles/dark.css?v=${FLUX_VERSION.version}`;
 
             head.appendChild(style);
         }
     }
 
     get versionDetails() {
-      return "Controller: "+(this.settingsService?.zitiSemver || '') +" Flux Console: "+(ZAC_VERSION?.version || '');
+      return "Controller: "+(this.settingsService?.zitiSemver || '') +" Flux Console: "+(FLUX_VERSION?.version || '');
     }
 }

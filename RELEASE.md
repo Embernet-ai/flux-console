@@ -1,18 +1,48 @@
-# Steps To Release
+# Flux Console Release Process
 
-* Make sure versions are up to date in ./package.json & ./projects/ziti-console-lib/package.json
-* Update release-notes.md with description/links to what has changed
-* Create a PR to "main" with above changes (and merge with approval and completed checks)
+This document describes the release process for **Flux Console**, part of the [Embernet](https://Embernet.ai) platform, powered by [Fireballz.ai](https://fireballz.ai).
 
-## If releasing the ziti-console-lib shared library
+**Repository:** [embernet-ai/flux-console](https://github.com/embernet-ai/flux-console)  
+**Support:** [helpdesk@fireballz.ai](mailto:helpdesk@fireballz.ai)
 
-* Create a new Release in Github with the following release name and tag format "ziti-console-lib-vx.x.x"
-* Add the contents of the release-notes to the release description
+---
 
-## If releasing the app-ziti-console application
+## Pre-Release Checklist
 
-* Create a new Release in Github with the following release name and tag format "app-ziti-console-vx.x.x"
-* Add the contents of the release-notes to the release description
+1. Ensure versions are updated in:
+   - `./package.json`
+   - `./projects/flux-console-lib/package.json`
+2. Update `release-notes.md` with a description and links to changes
+3. Create a PR to the `main` branch with the above changes
+4. Obtain approval and ensure all CI checks pass before merging
 
-* Publish release(s)
-* Go to Actions tab and look for failures triggered by the release.
+---
+
+## Releasing the flux-console-lib Shared Library
+
+1. Create a new Release in GitHub with the following format:
+   - **Tag:** `flux-console-lib-vX.X.X`
+   - **Release name:** `flux-console-lib-vX.X.X`
+2. Copy the relevant contents from `release-notes.md` into the release description
+3. Publish the release
+
+---
+
+## Releasing the Flux Console Application
+
+1. Create a new Release in GitHub with the following format:
+   - **Tag:** `flux-console-vX.X.X`
+   - **Release name:** `flux-console-vX.X.X`
+2. Copy the relevant contents from `release-notes.md` into the release description
+3. Publish the release
+
+---
+
+## Post-Release
+
+- Navigate to the **Actions** tab in GitHub and monitor for any failures triggered by the release
+- Verify that published artifacts are available and correct
+
+---
+
+For questions or issues, contact [helpdesk@fireballz.ai](mailto:helpdesk@fireballz.ai).

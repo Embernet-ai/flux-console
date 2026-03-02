@@ -1,14 +1,14 @@
 {
   "name": "flux-console-lib",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/embernet-ai/flux-console"
   },
   "author": {
-    "name": "Fireball Industries",
+    "name": "Patrick Ryan",
     "url": "https://embernet.ai",
-    "email": "support@fireballz.ai"
+    "email": "Patrick@fireballz.ai"
   },
   "license": "Apache-2.0",
   "peerDependencies": {

@@ -8,10 +8,10 @@ const __dirname = path.dirname(__filename);
 
 const packageJsonRaw = fs.readFileSync("./package.json", 'utf8');
 const packageJson = JSON.parse(packageJsonRaw);
-const zacVersion = packageJson.version;
+const fluxVersion = packageJson.version;
 
-const file = path.resolve(__dirname, 'projects/ziti-console-lib/src/lib', 'ZAC_VERSION.ts');
-fsExtra.writeFileSync(file,`export const ZAC_VERSION = {
-    "version": "${zacVersion}"
+const file = path.resolve(__dirname, 'projects/flux-console-lib/src/lib', 'FLUX_VERSION.ts');
+fsExtra.writeFileSync(file,`export const FLUX_VERSION = {
+    "version": "${fluxVersion}"
 };
 `, { encoding: 'utf-8' });

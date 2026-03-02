@@ -1,7 +1,7 @@
 {
   "name": "flux-console",
-  "version": "4.1.0",
-  "description": "Ziti Administration Console",
+  "version": "1.0.0",
+  "description": "Flux Console - Zero Trust Network Administration Console for Embernet",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -35,17 +35,32 @@
     "postinstall": "ls && node ./version.js && ng build flux-console-lib"
   },
   "config": {
-    "imageRepo": "netfoundry/flux-console",
-    "imageName": "zac",
+    "imageRepo": "embernet-ai/flux-console",
+    "imageName": "flux-console",
     "imagePort": "1480"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/embernet-ai/flux-console"
+  },
+  "homepage": "https://embernet.ai",
+  "bugs": {
+    "url": "https://github.com/embernet-ai/flux-console/issues",
+    "email": "helpdesk@fireballz.ai"
+  },
   "keywords": [
+    "flux-console",
+    "embernet",
+    "zero-trust",
+    "network",
+    "administration",
+    "console",
     "ziti"
   ],
   "author": {
-    "name": "NetFoundry",
-    "url": "http://openziti.io",
-    "email": "openziti@netfoundry.io"
+    "name": "Patrick Ryan",
+    "url": "https://embernet.ai",
+    "email": "Patrick@fireballz.ai"
   },
   "license": "Apache-2.0",
   "optionalDependencies": {
