@@ -1,0 +1,22 @@
+@if (!loading) {
+  <div class="main main-content-column" [ngClass]="{sideNavClosed: !displayNav, loggedIn: isAuthorized}">
+    @if (isAuthorized) {
+      <lib-header-bar [headerTitle]="headerTitle"></lib-header-bar>
+    }
+    <div class="main-content-row">
+      @if (isAuthorized) {
+        @if (displayNav) {
+          <lib-side-navigator [version]="versionDetails"></lib-side-navigator>
+        }
+      } @else {
+      }
+      <main>
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+  </div>
+}
+<lib-growler></lib-growler>
+@if (loading) {
+  <lib-loading-indicator [isLoading]="loading"></lib-loading-indicator>
+}
